@@ -9,17 +9,22 @@ CORS(app)
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-with open('styles.txt', encoding='utf-8') as f:
-    styles_text = f.read()
+# 載入風格知識庫（若沒有也不影響功能）
+try:
+    with open('styles.txt', encoding='utf-8') as f:
+        styles_text = f.read()
+except:
+    styles_text = ""
 
 @app.route("/")
 def index():
-    return "✅ 室內設計提案生成器 API 運作中"
+    return "✅ AI 室內設計提案生成器 API 運作中"
 
 @app.route("/api/parse_floorplan", methods=["POST"])
 def parse_floorplan():
     if 'image' not in request.files:
         return jsonify({"error": "未收到圖片"}), 400
+
     img_file = request.files['image']
     img_bytes = img_file.read()
     img_b64 = base64.b64encode(img_bytes).decode("utf-8")
@@ -74,6 +79,7 @@ def gen_proposal():
     owner_info = data.get("owner_info", "")
     furniture_list = data.get("furniture_list", [])
     total_area = data.get("total_area", "")
+
     furniture_text = "\n".join([
         f"- 空間名稱：{item['空間名稱']}｜家具名稱：{item['家具名稱']}｜位置：{item['位置']}"
         for item in furniture_list
@@ -127,14 +133,27 @@ def gen_proposal():
 
 @app.route("/api/export_docx", methods=["POST"])
 def export_docx():
-    data = request.get_json()
-    gpt_text = data.get("text", "")
-    path = generate_docx(gpt_text)
-    return send_file(path, as_attachment=True)
+    try:
+        data = request.get_json()
+        text = data.get("text", "").strip()
+        if not text:
+            return jsonify({"error": "未收到設計文案文字"}), 400
+        path = generate_docx(text)
+        return send_file(path, as_attachment=True)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/export_pptx", methods=["POST"])
 def export_pptx():
-    data = request.get_json()
-    gpt_text = data.get("text", "")
-    path = generate_pptx(gpt_text)
-    return send_file(path, as_attachment=True)
+    try:
+        data = request.get_json()
+        text = data.get("text", "").strip()
+        if not text:
+            return jsonify({"error": "未收到設計文案文字"}), 400
+        path = generate_pptx(text)
+        return send_file(path, as_attachment=True)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
