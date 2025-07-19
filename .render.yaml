@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: indoor-tour-api
+    env: python
+    buildCommand: ""
+    startCommand: python app.py
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: OPENAI_API_KEY
+        value: YOUR_OPENAI_KEY_HERE
