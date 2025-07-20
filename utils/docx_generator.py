@@ -3,9 +3,9 @@ from docx import Document
 from docx.shared import Inches
 from io import BytesIO
 
-def docx_generator(text: str, image_bytes: bytes = None) -> str:
+def docx_generate(text: str, image_bytes: bytes = None) -> str:
     doc = Document()
-    doc.add_heading('設計提案報告', 0)
+    doc.add_heading('室內設計導覽文案', 0)
 
     lines = text.split("\n")
     insert_image_after_heading = "3. 空間導覽"
@@ -30,6 +30,6 @@ def docx_generator(text: str, image_bytes: bytes = None) -> str:
         else:
             doc.add_paragraph(line)
 
-    path = "設計提案_with_image.docx"
+    path = "室內設計導覽文案.docx"
     doc.save(path)
     return path

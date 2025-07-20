@@ -2,7 +2,7 @@
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import openai, os, base64
-from docx_generator import docx_generator
+from docx_generator import docx_generate
 from io import BytesIO
 
 app = Flask(__name__)
@@ -79,7 +79,7 @@ def export_docx():
     print(f"📥 收到 Word 產出請求，文字長度：{len(text)}，圖片：{'有' if image_bytes else '無'}")
 
     try:
-        path = docx_generator(text, image_bytes)
+        path = docx_generate(text, image_bytes)
         return send_file(path, as_attachment=True)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
