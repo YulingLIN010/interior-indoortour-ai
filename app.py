@@ -10,7 +10,7 @@ from io import BytesIO
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 app = Flask(__name__)
-CORS(app)  # ✅ 加入 CORS 支援
+CORS(app)
 
 @app.route("/api/parse_floorplan", methods=["POST"])
 def parse_floorplan():
@@ -36,6 +36,8 @@ def parse_floorplan():
         max_tokens=2000
     )
     reply = response.choices[0].message.content
+    print("🔍 GPT Vision 回傳內容：", reply)  # ✅ 這裡加入 log
+
     return jsonify({"reply": reply})
 
 
@@ -61,6 +63,7 @@ def gen_proposal():
     )
 
     reply = response.choices[0].message.content
+    print("📄 GPT 文案回傳內容：", reply)  # ✅ 文案也加上 log
     return jsonify({"reply": reply})
 
 
