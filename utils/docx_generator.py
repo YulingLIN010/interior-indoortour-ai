@@ -5,7 +5,7 @@ from io import BytesIO
 
 def docx_generate(text: str, image_bytes: bytes = None) -> str:
     doc = Document()
-    doc.add_heading('室內設計導覽文案', 0)
+    doc.add_heading('設計提案報告', 0)
 
     lines = text.split("\n")
     insert_image_after_heading = "3. 空間導覽"
@@ -17,7 +17,6 @@ def docx_generate(text: str, image_bytes: bytes = None) -> str:
             doc.add_paragraph("")
             continue
 
-        # Heading 判斷
         if line.startswith("【") and line.endswith("】"):
             doc.add_heading(line.strip("【】"), level=1)
         elif line.startswith("1.") or line.startswith("2.") or line.startswith("3."):
@@ -30,6 +29,6 @@ def docx_generate(text: str, image_bytes: bytes = None) -> str:
         else:
             doc.add_paragraph(line)
 
-    path = "室內設計導覽文案.docx"
+    path = "設計提案_with_image.docx"
     doc.save(path)
     return path

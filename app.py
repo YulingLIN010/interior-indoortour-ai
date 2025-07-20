@@ -59,7 +59,6 @@ def gen_proposal():
         )
         reply = response.choices[0].message.content
         return jsonify({"reply": reply})
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -68,15 +67,13 @@ def export_docx():
     data = request.get_json()
     text = data.get("text", "")
     image_base64 = data.get("image_base64", "")
-
     image_bytes = None
+
     if image_base64:
         try:
             image_bytes = base64.b64decode(image_base64.split(",")[-1])
-        except:
-            print("⚠️ 圖片解碼失敗")
-
-    print(f"📥 收到 Word 產出請求，文字長度：{len(text)}，圖片：{'有' if image_bytes else '無'}")
+        except Exception as e:
+            print("⚠️ 無法解碼圖片")
 
     try:
         path = docx_generate(text, image_bytes)
