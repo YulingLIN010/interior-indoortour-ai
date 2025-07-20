@@ -2,7 +2,7 @@
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import openai, os, base64
-from docx_generator_with_image import generate_docx_with_image
+from docx_generator import docx_generator
 from io import BytesIO
 
 app = Flask(__name__)
