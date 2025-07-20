@@ -1,9 +1,4 @@
 flask
-flask_cors
 openai
 python-docx
-python-pptx
-opencv-python
-numpy
-pillow
-gunicorn
+Pillow
