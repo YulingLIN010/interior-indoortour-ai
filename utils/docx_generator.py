@@ -3,7 +3,7 @@ from docx import Document
 from docx.shared import Inches
 from io import BytesIO
 
-def generate_docx_with_image(text: str, image_bytes: bytes = None) -> str:
+def docx_generator(text: str, image_bytes: bytes = None) -> str:
     doc = Document()
     doc.add_heading('設計提案報告', 0)
 

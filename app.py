@@ -79,7 +79,7 @@ def export_docx():
     print(f"📥 收到 Word 產出請求，文字長度：{len(text)}，圖片：{'有' if image_bytes else '無'}")
 
     try:
-        path = generate_docx_with_image(text, image_bytes)
+        path = docx_generator(text, image_bytes)
         return send_file(path, as_attachment=True)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
