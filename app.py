@@ -5,7 +5,7 @@ from utils.docx_generator import generate_docx
 from utils.pptx_generator import generate_pptx
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins="*")  # ✅ 修正 CORS 問題
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
