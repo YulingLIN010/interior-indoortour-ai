@@ -1,43 +1,40 @@
-import os
-import base64
 from flask import Flask, request, jsonify, send_file
+from flask_cors import CORS
 from docx_generator import docx_generate
 from prompts import vision_prompt, proposal_prompt
+import base64
 import openai
+import os
 from io import BytesIO
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 app = Flask(__name__)
+CORS(app)  # ✅ 加入 CORS 支援
 
 @app.route("/api/parse_floorplan", methods=["POST"])
 def parse_floorplan():
-    image = request.files.get("image")
-    total_area = request.form.get("total_area", "").strip()
+    image_file = request.files.get("image")
+    total_area = request.form.get("total_area", "")
+    if not image_file:
+        return jsonify({"error": "No image provided"}), 400
 
-    if not image:
-        return jsonify({"error": "未提供圖面"}), 400
-
-    image_bytes = image.read()
+    image_bytes = image_file.read()
     base64_image = base64.b64encode(image_bytes).decode("utf-8")
 
     messages = [
         {"role": "system", "content": vision_prompt},
-        {
-            "role": "user",
-            "content": [
-                {"type": "text", "text": "請解析此平面圖的坪數與傢俱配置"},
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-            ]
-        }
+        {"role": "user", "content": [
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}},
+            {"type": "text", "text": f"請協助分析此圖面，若已知總坪數：{total_area} 可供參考"}
+        ]}
     ]
 
     response = openai.chat.completions.create(
         model="gpt-4o",
         messages=messages,
-        temperature=0.4
+        max_tokens=2000
     )
-
     reply = response.choices[0].message.content
     return jsonify({"reply": reply})
 
@@ -45,22 +42,22 @@ def parse_floorplan():
 @app.route("/api/gen_proposal", methods=["POST"])
 def gen_proposal():
     data = request.get_json()
-    style = data.get("style")
-    owner_info = data.get("owner_info")
-    total_area = data.get("total_area")
-    furniture_list = data.get("furniture_list")
+    style = data.get("style", "")
+    owner_info = data.get("owner_info", "")
+    total_area = data.get("total_area", "")
+    furniture_list = data.get("furniture_list", "")
 
-    content = proposal_prompt.format(style=style, owner=owner_info, area=total_area, furniture=furniture_list)
-
-    messages = [
-        {"role": "system", "content": "你是專業的室內設計師助手，擅長撰寫具故事性的空間導覽與設計提案文案。"},
-        {"role": "user", "content": content}
-    ]
+    content = proposal_prompt.format(
+        style=style,
+        owner=owner_info,
+        area=total_area,
+        furniture=furniture_list
+    )
 
     response = openai.chat.completions.create(
         model="gpt-4o",
-        messages=messages,
-        temperature=0.7
+        messages=[{"role": "system", "content": content}],
+        max_tokens=3000
     )
 
     reply = response.choices[0].message.content
@@ -71,15 +68,14 @@ def gen_proposal():
 def export_docx():
     data = request.get_json()
     text = data.get("text", "")
-    image_base64 = data.get("image_base64", "")
+    image_base64 = data.get("image", "")
 
-    if "," in image_base64:
-        image_base64 = image_base64.split(",")[1]
-    image_bytes = base64.b64decode(image_base64)
+    image_bytes = base64.b64decode(image_base64.split(",")[-1]) if image_base64 else None
+    output = BytesIO()
+    docx_generate(text, image_bytes, output)
+    output.seek(0)
 
-    path = docx_generate(text, image_bytes)
-
-    return send_file(path, as_attachment=True, download_name="室內設計導覽文案.docx")
+    return send_file(output, as_attachment=True, download_name="設計提案.docx", mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True)
