@@ -13,13 +13,13 @@ def generate_docx(text: str):
         paragraphs = text.split("\n")
         for para in paragraphs:
             if para.strip():
-                # 避免太長破壞 Word 結構
                 if len(para) > 120:
                     for chunk in [para[i:i+120] for i in range(0, len(para), 120)]:
                         doc.add_paragraph(chunk.strip())
                 else:
                     doc.add_paragraph(para.strip())
 
+    os.makedirs("/mnt/data", exist_ok=True)  # ✅ 確保目錄存在
     path = "/mnt/data/proposal.docx"
     try:
         doc.save(path)
