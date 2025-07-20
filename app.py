@@ -9,16 +9,13 @@ CORS(app)
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# 載入風格知識庫（若沒有也不影響功能）
-try:
-    with open('styles.txt', encoding='utf-8') as f:
-        styles_text = f.read()
-except:
-    styles_text = ""
+# 載入風格知識庫
+with open('styles.txt', encoding='utf-8') as f:
+    styles_text = f.read()
 
 @app.route("/")
 def index():
-    return "✅ AI 室內設計提案生成器 API 運作中"
+    return "✅ 室內設計提案生成器 API 運作中"
 
 @app.route("/api/parse_floorplan", methods=["POST"])
 def parse_floorplan():
@@ -28,6 +25,7 @@ def parse_floorplan():
     img_file = request.files['image']
     img_bytes = img_file.read()
     img_b64 = base64.b64encode(img_bytes).decode("utf-8")
+
     user_input_total_area = request.form.get("total_area", "").strip()
 
     vision_prompt = f"""
@@ -69,12 +67,14 @@ def parse_floorplan():
         )
         reply = response.choices[0].message.content
         return jsonify({"reply": reply})
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/gen_proposal", methods=["POST"])
 def gen_proposal():
     data = request.get_json()
+
     style = data.get("style", "")
     owner_info = data.get("owner_info", "")
     furniture_list = data.get("furniture_list", [])
@@ -128,6 +128,7 @@ def gen_proposal():
         )
         reply = response.choices[0].message.content
         return jsonify({"reply": reply})
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -135,25 +136,22 @@ def gen_proposal():
 def export_docx():
     try:
         data = request.get_json()
-        text = data.get("text", "").strip()
-        if not text:
-            return jsonify({"error": "未收到設計文案文字"}), 400
+        text = data.get("text", "")
+        print("📥 收到匯出 Word 請求，字數：", len(text))
         path = generate_docx(text)
         return send_file(path, as_attachment=True)
     except Exception as e:
+        print("❌ 匯出 Word 發生錯誤：", e)
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/export_pptx", methods=["POST"])
 def export_pptx():
     try:
         data = request.get_json()
-        text = data.get("text", "").strip()
-        if not text:
-            return jsonify({"error": "未收到設計文案文字"}), 400
+        text = data.get("text", "")
+        print("📥 收到匯出 PPT 請求，字數：", len(text))
         path = generate_pptx(text)
         return send_file(path, as_attachment=True)
     except Exception as e:
+        print("❌ 匯出 PPT 發生錯誤：", e)
         return jsonify({"error": str(e)}), 500
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
