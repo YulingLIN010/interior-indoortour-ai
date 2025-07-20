@@ -19,8 +19,7 @@ def generate_docx(text: str):
                 else:
                     doc.add_paragraph(para.strip())
 
-    os.makedirs("/mnt/data", exist_ok=True)  # ✅ 確保目錄存在
-    path = "/mnt/data/proposal.docx"
+    path = "proposal.docx"  # ✅ 儲存在當前目錄
     try:
         doc.save(path)
         print("✅ Word 檔已成功儲存：", path)
