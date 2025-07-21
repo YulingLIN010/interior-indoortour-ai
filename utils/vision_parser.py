@@ -1,9 +1,9 @@
-
 import base64
 import io
 import json
 from PIL import Image
 from openai import OpenAI
+import re
 
 client = OpenAI()
 
@@ -41,6 +41,8 @@ def parse_floorplan_image(image_file):
     }
   ]
 }
+
+請直接回傳純 JSON 格式，不要加上 ```json 標記。
 """
 
     response = client.chat.completions.create(
@@ -56,17 +58,16 @@ def parse_floorplan_image(image_file):
         ]
     )
 
-result = response.choices[0].message.content.strip()
+    result = response.choices[0].message.content.strip()
 
-# 嘗試從 ```json 區塊中抓出純 JSON 字串
-import re
-match = re.search(r"```json\s*({.*?})\s*```", result, re.DOTALL)
-if match:
-    cleaned_result = match.group(1)
-else:
-    cleaned_result = result  # 若沒有包 markdown，直接使用原始內容
-try:
-    return json.loads(cleaned_result)
-except json.JSONDecodeError as e:
-    return {"error": f"GPT 回傳內容解析失敗: {str(e)}", "raw": result}
+    # 嘗試從 ```json 區塊中抓出純 JSON 字串
+    match = re.search(r"```json\s*({.*?})\s*```", result, re.DOTALL)
+    if match:
+        cleaned_result = match.group(1)
+    else:
+        cleaned_result = result  # 若沒有包 markdown，直接使用原始內容
+
+    try:
+        return json.loads(cleaned_result)
+    except json.JSONDecodeError as e:
         return {"error": f"GPT 回傳內容解析失敗: {str(e)}", "raw": result}
