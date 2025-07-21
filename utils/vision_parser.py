@@ -1,8 +1,10 @@
 
-import openai
 import base64
 import io
 from PIL import Image
+from openai import OpenAI
+
+client = OpenAI()  # 預設從環境變數 OPENAI_API_KEY 讀取
 
 def parse_floorplan_image(image_file):
     # ✅ 將圖檔轉為合格 PNG 格式並編碼為 base64
@@ -42,7 +44,7 @@ def parse_floorplan_image(image_file):
 }
 """
 
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
             {
@@ -52,8 +54,7 @@ def parse_floorplan_image(image_file):
                     {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}
                 ]
             }
-        ],
-        temperature=0.3
+        ]
     )
 
     result = response.choices[0].message.content.strip()
