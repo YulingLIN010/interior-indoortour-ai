@@ -1,19 +1,18 @@
 
 import base64
 import io
+import json
 from PIL import Image
 from openai import OpenAI
 
-client = OpenAI()  # 預設從環境變數 OPENAI_API_KEY 讀取
+client = OpenAI()
 
 def parse_floorplan_image(image_file):
-    # ✅ 將圖檔轉為合格 PNG 格式並編碼為 base64
     image = Image.open(image_file.stream).convert("RGB")
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
-    # ✅ 強化 GPT-4o 圖像辨識 Prompt（v1.7）
     prompt = """
 你是一位專業的室內設計師，請根據以下2D室內空間平面配置圖進行詳細分析，務必依照圖中結構與常見配置準確判斷每個空間的功能與配置。請辨識以下項目：
 
@@ -58,4 +57,7 @@ def parse_floorplan_image(image_file):
     )
 
     result = response.choices[0].message.content.strip()
-    return eval(result)
+    try:
+        return json.loads(result)
+    except json.JSONDecodeError as e:
+        return {"error": f"GPT 回傳內容解析失敗: {str(e)}", "raw": result}
