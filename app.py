@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, origins=["https://www.atophouse.com"])
+CORS(app, resources={r"/api/*": {"origins": "https://www.atophouse.com"}})
 UPLOAD_FOLDER = "static"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -30,10 +30,13 @@ def parse_floorplan():
 
 @app.route("/api/generate_design_narrative", methods=["POST"])
 def generate_narrative():
-    data = request.get_json()
-    prompt = generate_narrative_prompt(data)
-    content = call_gpt_narrative(prompt)
-    return jsonify(content)
+    try:
+        data = request.get_json()
+        prompt = generate_narrative_prompt(data)
+        content = call_gpt_narrative(prompt)
+        return jsonify(content)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/download_word_docx", methods=["POST"])
 def download_docx():
