@@ -67,5 +67,6 @@ else:
     cleaned_result = result  # 若沒有包 markdown，直接使用原始內容
 try:
     return json.loads(cleaned_result)
-    except json.JSONDecodeError as e:
+except json.JSONDecodeError as e:
+    return {"error": f"GPT 回傳內容解析失敗: {str(e)}", "raw": result}
         return {"error": f"GPT 回傳內容解析失敗: {str(e)}", "raw": result}
