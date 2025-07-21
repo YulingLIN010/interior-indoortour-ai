@@ -16,12 +16,17 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route("/api/parse_floorplan", methods=["POST"])
 def parse_floorplan():
-    file = request.files.get("file")
-    if not file:
-        return jsonify({"error": "No file uploaded"}), 400
-    image_bytes = file.read()
-    result = parse_floorplan_image(image_bytes)
-    return jsonify(result)
+    try:
+        if "file" not in request.files:
+            return jsonify({"error": "未收到圖面"}), 400
+
+        image_file = request.files["file"]  # ⬅️ 傳入原始檔案物件
+        result = parse_floorplan_image(image_file)  # ✅ 呼叫已強化的圖像辨識函式
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/generate_design_narrative", methods=["POST"])
 def generate_narrative():
