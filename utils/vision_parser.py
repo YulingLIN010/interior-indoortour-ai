@@ -56,8 +56,16 @@ def parse_floorplan_image(image_file):
         ]
     )
 
-    result = response.choices[0].message.content.strip()
-    try:
-        return json.loads(result)
+result = response.choices[0].message.content.strip()
+
+# 嘗試從 ```json 區塊中抓出純 JSON 字串
+import re
+match = re.search(r"```json\s*({.*?})\s*```", result, re.DOTALL)
+if match:
+    cleaned_result = match.group(1)
+else:
+    cleaned_result = result  # 若沒有包 markdown，直接使用原始內容
+try:
+    return json.loads(cleaned_result)
     except json.JSONDecodeError as e:
         return {"error": f"GPT 回傳內容解析失敗: {str(e)}", "raw": result}
