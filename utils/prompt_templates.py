@@ -41,8 +41,7 @@ def call_gpt_narrative(prompt):
         )
         content = ""
         for chunk in response:
-            if hasattr(chunk.choices[0].delta, "content"):
-    content += chunk.choices[0].delta.content
+            content += chunk.choices[0].delta.get("content", "")
 
         parts = {"concept": "", "sections": [], "conclusion": ""}
         current = None
