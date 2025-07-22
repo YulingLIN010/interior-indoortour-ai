@@ -1,3 +1,4 @@
+
 import openai
 
 def generate_narrative_prompt(data):
@@ -36,6 +37,10 @@ def call_gpt_narrative(prompt):
         model="gpt-4o",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.5,
-        max_tokens=2048
+        max_tokens=2048,
+        stream=True
     )
-    return {"content": response.choices[0].message.content}
+    content = ""
+    for chunk in response:
+        content += chunk.choices[0].delta.get("content", "")
+    return {"content": content}
