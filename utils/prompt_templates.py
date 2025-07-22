@@ -43,7 +43,6 @@ def call_gpt_narrative(prompt):
         for chunk in response:
             content += chunk.choices[0].delta.get("content", "")
 
-        # 解析回傳文字分段格式
         parts = {"concept": "", "sections": [], "conclusion": ""}
         current = None
         for line in content.splitlines():
@@ -65,6 +64,7 @@ def call_gpt_narrative(prompt):
             elif current == "section" and parts["sections"]:
                 parts["sections"][-1]["text"] += line + "\n"
 
+        parts["content"] = content  # ✅ fallback 加入成功
         return parts
     except Exception as e:
         return {"error": str(e)}
