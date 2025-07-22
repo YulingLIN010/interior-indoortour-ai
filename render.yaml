@@ -1,0 +1,10 @@
+
+services:
+  - type: web
+    name: interior-indoortour-ai
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --timeout 180 --workers 1 --threads 2
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
