@@ -34,7 +34,10 @@ def generate_narrative():
         data = request.get_json()
         prompt = generate_narrative_prompt(data)
         content = call_gpt_narrative(prompt)
-        return jsonify(content)
+        
+    print("=== PROMPT ===\n", prompt)
+    print("=== RESPONSE ===\n", content)
+    return jsonify(content)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
