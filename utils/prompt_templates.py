@@ -1,4 +1,3 @@
-
 import openai
 
 def generate_narrative_prompt(data):
@@ -13,12 +12,22 @@ def generate_narrative_prompt(data):
     prompt += "3. 一段結語收尾（約100字）\n\n"
     prompt += f"空間風格：{style}\n總坪數：{total_area}\n屋主資料：{owner_info}\n空間家具資料如下：\n"
 
+    # 防呆寫法，任何欄位為 None 都會有預設
     for space in furniture:
-        prompt += f"空間名稱：{space.get('name')}，坪數：{space.get('area')}，家具：{', '.join(space.get('furniture', []))}\n"
+        name = space.get("name") or "未命名"
+        area = space.get("area")
+        if area is None:
+            area = "未提供"
+        furn_list = space.get("furniture")
+        if not furn_list:
+            furn_list = []
+        if not isinstance(furn_list, list):
+            furn_list = [str(furn_list)]
+        furniture_text = ", ".join(furn_list)
+        prompt += f"空間名稱：{name}，坪數：{area}，家具：{furniture_text}\n"
 
     prompt += "\n請用以下格式回覆：\n【設計理念】\n（內文）\n\n【空間名稱】\n（空間文案）\n\n【結語】\n（一段結語）"
     return prompt
-
 
 def call_gpt_narrative(prompt):
     response = openai.chat.completions.create(
