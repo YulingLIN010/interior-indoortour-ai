@@ -19,6 +19,7 @@ def generate_narrative_prompt(data):
     prompt += "\n請用以下格式回覆：\n【設計理念】\n（內文）\n\n【空間名稱】\n（空間文案）\n\n【結語】\n（一段結語）"
     return prompt
 
+
 def call_gpt_narrative(prompt):
     response = openai.chat.completions.create(
         model="gpt-4o",
@@ -36,34 +37,62 @@ def call_gpt_narrative(prompt):
         if hasattr(chunk.choices[0].delta, "content"):
             content += chunk.choices[0].delta.content
 
-    parts = {"content": content}
-
+    # 初步拆解段落
     lines = content.splitlines()
-    current_key = None
+    parts = {"content": content}
     buffer = []
+    current_key = None
     for line in lines:
         if "設計理念" in line:
-            if current_key:
+            if current_key and buffer:
                 parts[current_key] = "\n".join(buffer).strip()
-                buffer = []
             current_key = "concept"
+            buffer = []
         elif "結語" in line:
-            if current_key:
+            if current_key and buffer:
                 parts[current_key] = "\n".join(buffer).strip()
-                buffer = []
             current_key = "conclusion"
-        elif "】" in line:
-            if current_key:
+            buffer = []
+        elif line.startswith("【") and line.endswith("】"):
+            if current_key and buffer:
                 parts[current_key] = "\n".join(buffer).strip()
-                buffer = []
-            current_key = "sections"
+            current_key = "section_text"
+            parts["section_title"] = line.replace("【", "").replace("】", "").strip()
+            buffer = []
         else:
             buffer.append(line)
-
     if current_key and buffer:
-        if current_key == "sections":
-            parts["sections"] = [{"title": "空間文案", "text": "\n".join(buffer).strip()}]
-        else:
-            parts[current_key] = "\n".join(buffer).strip()
+        parts[current_key] = "\n".join(buffer).strip()
 
-    return parts
+    # 建立 Word 所需格式
+    section = {
+        "room": parts.get("section_title", "未命名空間"),
+        "area": "未提供",
+        "function": "未提供",
+        "furniture": [],
+        "color": "未提供",
+        "design_note": "未提供",
+        "emotion": "未提供"
+    }
+
+    # 嘗試用簡單段落切分（若格式清楚）
+    if "section_text" in parts:
+        text = parts["section_text"]
+        lines = [line.strip() for line in text.split("\n") if line.strip()]
+        if len(lines) >= 6:
+            section["area"] = lines[0]
+            section["function"] = lines[1]
+            section["furniture"] = [f.strip() for f in lines[2].replace("傢俱配置：", "").replace("家具：", "").split("、") if f.strip()]
+            section["color"] = lines[3]
+            section["design_note"] = lines[4]
+            section["emotion"] = lines[5]
+        else:
+            section["function"] = text
+
+    parts["sections"] = [section]
+    return {
+        "concept": parts.get("concept", ""),
+        "sections": parts["sections"],
+        "conclusion": parts.get("conclusion", ""),
+        "content": content
+    }
