@@ -68,6 +68,20 @@ def parse_floorplan_image(image_file):
         cleaned_result = result  # 若沒有包 markdown，直接使用原始內容
 
     try:
-        return json.loads(cleaned_result)
+        parsed_json = json.loads(cleaned_result)
+        # -----【新增】自動四捨五入到兩位小數------
+        if "total_area" in parsed_json:
+            try:
+                parsed_json["total_area"] = round(float(parsed_json["total_area"]), 2)
+            except Exception:
+                pass
+        if "spaces" in parsed_json:
+            for s in parsed_json["spaces"]:
+                try:
+                    s["area"] = round(float(s.get("area", 0)), 2)
+                except Exception:
+                    pass
+        # -----【新增結束】----------------------
+        return parsed_json
     except json.JSONDecodeError as e:
         return {"error": f"GPT 回傳內容解析失敗: {str(e)}", "raw": result}
