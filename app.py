@@ -2,7 +2,7 @@ import os
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from utils.vision_parser import parse_floorplan_image
-from utils.prompt_templates import generate_narrative_prompt, call_gpt_narrative
+from utils.prompt_templates import generate_narrative_prompt, call_gpt_narrative, normalize_sections
 from utils.docx_generator import generate_docx
 import io
 from dotenv import load_dotenv
@@ -10,21 +10,29 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "https://www.atophouse.com"}})
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 UPLOAD_FOLDER = "static"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def validate_sections(sections):
+    keys = ["room", "area", "function", "furniture", "color", "design_note", "emotion"]
+    for s in sections:
+        for k in keys:
+            if k not in s:
+                if k == "furniture":
+                    s[k] = []
+                else:
+                    s[k] = ""
+    return sections
 
 @app.route("/api/parse_floorplan", methods=["POST"])
 def parse_floorplan():
     try:
         if "file" not in request.files:
             return jsonify({"error": "未收到圖面"}), 400
-
-        image_file = request.files["file"]  # ⬅️ 傳入原始檔案物件
-        result = parse_floorplan_image(image_file)  # ✅ 呼叫已強化的圖像辨識函式
-
+        image_file = request.files["file"]
+        result = parse_floorplan_image(image_file)
         return jsonify(result)
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -33,7 +41,9 @@ def generate_narrative():
     try:
         data = request.get_json()
         prompt = generate_narrative_prompt(data)
-        content = call_gpt_narrative(prompt)
+        content = call_gpt_narrative(prompt, data)
+        # 保證sections完整
+        content["sections"] = validate_sections(content.get("sections", []))
         return jsonify(content)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

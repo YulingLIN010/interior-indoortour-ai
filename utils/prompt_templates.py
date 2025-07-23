@@ -1,4 +1,5 @@
 import openai
+import json
 
 def generate_narrative_prompt(data):
     style = data.get("style", "")
@@ -6,30 +7,37 @@ def generate_narrative_prompt(data):
     total_area = data.get("total_area", "")
     furniture = data.get("furniture_layout", [])
 
-    prompt = f"請根據以下資訊撰寫室內設計導覽文案（精簡版）：\n"
-    prompt += "1. 一段設計理念總述（不超過200字）\n"
-    prompt += "2. 描述以下空間（僅限1區），以段落呈現完整敘述（約200字）\n"
-    prompt += "3. 一段結語收尾（約100字）\n\n"
-    prompt += f"空間風格：{style}\n總坪數：{total_area}\n屋主資料：{owner_info}\n空間家具資料如下：\n"
+    prompt = f"""你是一位專業室內設計師，請根據下列資訊撰寫空間設計導覽文案：
+1. 先寫一段設計理念總述（約100-200字）。
+2. 針對每一個空間，請依下列欄位產生完整條列（必填所有欄位）：
+- 空間名稱（room）
+- 坪數（area）
+- 功能說明（function）
+- 家具配置（furniture，以頓號或逗號分隔）
+- 色彩搭配（color）
+- 設計重點（design_note）
+- 空間情感描述（emotion）
+請用 JSON 陣列格式輸出所有空間，key 必須與上述相同（如 room, area, ...）。
 
-    # 防呆寫法，任何欄位為 None 都會有預設
+3. 最後寫一段結語（50-100字）。
+
+設計風格：{style}
+總坪數：{total_area}
+屋主資料：{owner_info}
+空間家具資料如下：
+"""
     for space in furniture:
-        name = space.get("name") or "未命名"
-        area = space.get("area")
-        if area is None:
-            area = "未提供"
-        furn_list = space.get("furniture")
-        if not furn_list:
-            furn_list = []
+        name = space.get("name", "未命名")
+        area = space.get("area", "未提供")
+        furn_list = space.get("furniture", [])
         if not isinstance(furn_list, list):
             furn_list = [str(furn_list)]
-        furniture_text = ", ".join(furn_list)
+        furniture_text = "、".join(furn_list)
         prompt += f"空間名稱：{name}，坪數：{area}，家具：{furniture_text}\n"
-
-    prompt += "\n請用以下格式回覆：\n【設計理念】\n（內文）\n\n【空間名稱】\n（空間文案）\n\n【結語】\n（一段結語）"
+    prompt += "\n請務必照上述格式與 key 回答。"
     return prompt
 
-def call_gpt_narrative(prompt):
+def call_gpt_narrative(prompt, data):
     response = openai.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -37,71 +45,66 @@ def call_gpt_narrative(prompt):
             {"role": "user", "content": prompt}
         ],
         temperature=0.7,
-        max_tokens=1024,
-        stream=True
+        max_tokens=2048,
     )
 
-    content = ""
-    for chunk in response:
-        if hasattr(chunk.choices[0].delta, "content"):
-            content += chunk.choices[0].delta.content
-
-    # 初步拆解段落
-    lines = content.splitlines()
-    parts = {"content": content}
-    buffer = []
-    current_key = None
-    for line in lines:
-        if "設計理念" in line:
-            if current_key and buffer:
-                parts[current_key] = "\n".join(buffer).strip()
-            current_key = "concept"
-            buffer = []
-        elif "結語" in line:
-            if current_key and buffer:
-                parts[current_key] = "\n".join(buffer).strip()
-            current_key = "conclusion"
-            buffer = []
-        elif line.startswith("【") and line.endswith("】"):
-            if current_key and buffer:
-                parts[current_key] = "\n".join(buffer).strip()
-            current_key = "section_text"
-            parts["section_title"] = line.replace("【", "").replace("】", "").strip()
-            buffer = []
-        else:
-            buffer.append(line)
-    if current_key and buffer:
-        parts[current_key] = "\n".join(buffer).strip()
-
-    # 建立 Word 所需格式
-    section = {
-        "room": parts.get("section_title", "未命名空間"),
-        "area": "未提供",
-        "function": "未提供",
-        "furniture": [],
-        "color": "未提供",
-        "design_note": "未提供",
-        "emotion": "未提供"
-    }
-
-    # 嘗試用簡單段落切分（若格式清楚）
-    if "section_text" in parts:
-        text = parts["section_text"]
-        lines = [line.strip() for line in text.split("\n") if line.strip()]
-        if len(lines) >= 6:
-            section["area"] = lines[0]
-            section["function"] = lines[1]
-            section["furniture"] = [f.strip() for f in lines[2].replace("傢俱配置：", "").replace("家具：", "").split("、") if f.strip()]
-            section["color"] = lines[3]
-            section["design_note"] = lines[4]
-            section["emotion"] = lines[5]
-        else:
-            section["function"] = text
-
-    parts["sections"] = [section]
+    # 嘗試從回應解析 JSON
+    text = response.choices[0].message.content
+    parts = {"content": text}
+    # 理念
+    concept = ""
+    conclusion = ""
+    sections = []
+    # 自動抽理念
+    concept_match = None
+    conclusion_match = None
+    import re
+    concept_match = re.search(r"(?:【?設計理念(?:總述)?】?\n?)([\s\S]+?)(?:\n|【)", text)
+    if concept_match:
+        concept = concept_match.group(1).strip()
+    # sections: 嘗試抓出json
+    json_match = re.search(r"\[(\s*{[\s\S]+?}\s*)\]", text)
+    if json_match:
+        json_str = "[" + json_match.group(1).strip() + "]"
+        try:
+            sections = json.loads(json_str)
+        except Exception:
+            sections = []
+    # 結語
+    conclusion_match = re.search(r"(?:【?結語】?\n?)([\s\S]+)$", text)
+    if conclusion_match:
+        conclusion = conclusion_match.group(1).strip()
+    if not concept:
+        concept = text.split("\n")[0]
+    if not sections:
+        # fallback: 只抽主要段落
+        sections = []
+        for line in text.split("\n"):
+            if any(k in line for k in ["空間名稱", "room"]):
+                sections.append({"function": line})
+    if not conclusion:
+        conclusion = text.split("\n")[-1]
+    # 自動補全欄位
+    sections = normalize_sections(sections)
     return {
-        "concept": parts.get("concept", ""),
-        "sections": parts["sections"],
-        "conclusion": parts.get("conclusion", ""),
-        "content": content
+        "concept": concept,
+        "sections": sections,
+        "conclusion": conclusion,
+        "content": text
     }
+
+def normalize_sections(sections):
+    keys = ["room", "area", "function", "furniture", "color", "design_note", "emotion"]
+    normed = []
+    for s in sections:
+        norm = {}
+        for k in keys:
+            if k not in s:
+                norm[k] = [] if k == "furniture" else ""
+            else:
+                norm[k] = s[k]
+        # 家具欄位統一成字串陣列
+        if not isinstance(norm["furniture"], list):
+            norm["furniture"] = [str(norm["furniture"])]
+        normed.append(norm)
+    return normed
