@@ -1,4 +1,5 @@
 import openai
+import openai
 
 def generate_narrative_prompt(data, section="concept"):
     style = data.get("style", "")
@@ -11,13 +12,18 @@ def generate_narrative_prompt(data, section="concept"):
     elif section == "overview":
         prompt = f"請根據以下資訊，產生【空間總覽與動線說明】（依大門入口開始按照動線順序規劃及介紹)，100字內。\n總坪數：{total_area}\n空間分布：{', '.join([s.get('name','') for s in furniture])}\n"
     elif section == "rooms":
-        prompt = "請依下列空間資料，每個空間100字以上，產生【逐區空間導覽】（依大門入口開始按照動線順序介紹、每區以『【空間名稱】』開頭，內容請條列式列出:坪數、功能、設計重點、色彩配置、家具重點、情感）。\n"
+        prompt = (
+            "請依下列空間資料，產生每個空間150-200字的【逐區空間導覽】"
+            "（依大門入口開始按照動線順序介紹、每區以『【空間名稱】』開頭，"
+            "內容請條列式重點列出:坪數、功能、設計重點、色彩配置、家具重點、情感）。\n"
+            "條列內容格式必須完全一致，每一條都用「- 標題：內容」開頭，不得加粗或使用markdown粗體。"
+        )
         for space in furniture:
             name = space.get("name", "未命名")
             area = space.get("area", "未提供")
             furn_list = space.get("furniture", [])
             furniture_text = "、".join(furn_list)
-            prompt += f"空間名稱：{name}，坪數：{area}，家具：{furniture_text}\n"
+            prompt += f"\n空間名稱：{name}，坪數：{area}，家具：{furniture_text}"
     elif section == "room":
         room = data.get("room_data", {})
         name = room.get("name", "未命名")
@@ -25,11 +31,14 @@ def generate_narrative_prompt(data, section="concept"):
         furn_list = room.get("furniture", [])
         furniture_text = "、".join(furn_list)
         prompt = (
-            f"請根據以下單一空間資料，產生100字以上的【逐區空間導覽】段落，格式須條列：\n"
+            f"請根據以下單一空間資料，產生每個空間150-200字的【逐區空間導覽】段落，"
+            "內容必須以條列式且格式完全一致，每一條都用「- 標題：內容」開頭，不得加粗或使用markdown粗體：\n"
             f"空間名稱：{name}\n"
             f"坪數：{area}\n"
             f"主要家具：{furniture_text}\n"
-            "請條列功能、家具重點、設計重點、色彩搭配、情感描述。"
+            "請條列出：\n"
+            "- 坪數：\n- 功能：\n- 設計重點：\n- 色彩配置：\n- 家具重點：\n- 情感描述："
+            "\n每一項都要填寫完整，條列格式必須一致且不可加粗。"
         )
     elif section == "owner_story":
         prompt = f"請根據以下屋主資料，產生100字的【屋主故事】。\n{owner_info}"
