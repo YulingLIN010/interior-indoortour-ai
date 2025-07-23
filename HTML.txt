@@ -143,7 +143,7 @@
       document.getElementById("showTotalArea").innerText = "空間總坪數：" + (total || '') + " 坪";
     }
 
-    // 🟢【重點修正】分析時送出 user_total_area 給後端
+    // 送出 user_total_area 給後端
     async function analyzeFurniture() {
       const fileInput = document.getElementById("floorplan");
       const status = document.getElementById("status");
@@ -162,7 +162,7 @@
         formData.append("user_total_area", userTotalArea);
       }
 
-      const parseRes = await fetch("https://interior-indoortour-ai.onrender.com/api/parse_floorplan", { method: "POST", body: formData });
+      const parseRes = await fetch("/api/parse_floorplan", { method: "POST", body: formData });
       const parsed = await parseRes.json();
       window.latestParsedFurniture = parsed.spaces;
       window.latestTotalArea = parsed.total_area;
@@ -213,7 +213,7 @@
     }
 
     window.generatedSections = {};
-    // 🟢【分段產文案】rooms區塊逐區請求
+    // 分段產文案
     async function generateAllSections() {
       const fileInput = document.getElementById("floorplan");
       if (!fileInput.files.length) { alert("請上傳圖面"); return; }
@@ -250,7 +250,7 @@
       // 1. 先產出其他區塊（非rooms）
       let sections = {};
       for (const section of ["concept", "overview", "owner_story", "conclusion"]) {
-        const res = await fetch("https://interior-indoortour-ai.onrender.com/api/generate_section", {
+        const res = await fetch("/api/generate_section", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...payload, section })
@@ -271,14 +271,13 @@
       let spaces = window.latestParsedFurniture || [];
       for (let i = 0; i < spaces.length; i++) {
         const space = spaces[i];
-        // 對每區發請求
         const roomPayload = {
           ...payload,
           section: "room",
           room_data: space,
         };
         document.getElementById("docPreview").innerText += `\n⏳ 產生中: ${space.name}...`;
-        const res = await fetch("https://interior-indoortour-ai.onrender.com/api/generate_section", {
+        const res = await fetch("/api/generate_section", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(roomPayload)
@@ -316,7 +315,7 @@
         total_area: areaSum,
         image_filename: fileInput.files[0].name
       };
-      const docRes = await fetch("https://interior-indoortour-ai.onrender.com/api/download_word_docx", {
+      const docRes = await fetch("/api/download_word_docx", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
