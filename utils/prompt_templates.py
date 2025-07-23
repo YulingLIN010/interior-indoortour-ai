@@ -13,7 +13,7 @@ def generate_narrative_prompt(data, section="concept"):
         prompt = f"請根據以下資訊，產生【空間總覽與動線說明】（依大門入口開始按照動線順序規劃及介紹)，100字內。\n總坪數：{total_area}\n空間分布：{', '.join([s.get('name','') for s in furniture])}\n"
     elif section == "rooms":
         prompt = (
-            "請依下列空間資料，產生每個空間150-200字的【逐區空間導覽】"
+            "請依下列空間資料，產生每個空間100-150字的【逐區空間導覽】"
             "（依大門入口開始按照動線順序介紹、每區以『【空間名稱】』開頭，"
             "內容請條列式重點列出:坪數、功能、設計重點、色彩配置、家具重點、情感）。\n"
             "條列內容格式必須完全一致，每一條都用「- 標題：內容」開頭，不得加粗或使用markdown粗體。"
@@ -31,7 +31,7 @@ def generate_narrative_prompt(data, section="concept"):
         furn_list = room.get("furniture", [])
         furniture_text = "、".join(furn_list)
         prompt = (
-            f"請根據以下單一空間資料，產生每個空間150-200字的【逐區空間導覽】段落，"
+            f"請根據以下單一空間資料，產生每個空間100-150字的【逐區空間導覽】段落，"
             "內容必須以條列式且格式完全一致，每一條都用「- 標題：內容」開頭，不得加粗或使用markdown粗體：\n"
             f"空間名稱：{name}\n"
             f"坪數：{area}\n"
