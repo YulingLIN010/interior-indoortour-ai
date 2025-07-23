@@ -2,7 +2,7 @@ import os
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from utils.vision_parser import parse_floorplan_image
-from utils.prompt_templates import generate_narrative_prompt, call_gpt_narrative
+from utils.prompt_templates import generate_narrative_prompt, call_gpt_section
 from utils.docx_generator import generate_docx
 import io
 from dotenv import load_dotenv
@@ -22,22 +22,20 @@ def parse_floorplan():
         image_file = request.files["file"]
         filename = image_file.filename
         save_path = os.path.join(UPLOAD_FOLDER, filename)
-        image_file.save(save_path)  # ⬅️ 實體檔案儲存於 static/
+        image_file.save(save_path)
         result = parse_floorplan_image(image_file)
-        result["image_filename"] = filename  # 回傳給前端後續產 Word 用
+        result["image_filename"] = filename
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/api/generate_design_narrative", methods=["POST"])
-def generate_narrative():
-    try:
-        data = request.get_json()
-        prompt = generate_narrative_prompt(data)
-        content = call_gpt_narrative(prompt, data)
-        return jsonify(content)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+@app.route("/api/generate_section", methods=["POST"])
+def generate_section():
+    data = request.get_json()
+    section = data.get("section")
+    prompt = generate_narrative_prompt(data, section)
+    content = call_gpt_section(prompt)
+    return jsonify({"section": section, "content": content})
 
 @app.route("/api/download_word_docx", methods=["POST"])
 def download_docx():
@@ -51,3 +49,4 @@ def download_docx():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
