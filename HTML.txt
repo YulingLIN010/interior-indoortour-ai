@@ -4,26 +4,54 @@
   <meta charset="UTF-8" />
   <title>空間設計導覽文案小幫手</title>
   <style>
-    body { font-family: sans-serif; background-color: #fffbea; padding: 20px; }
+    body { font-family: sans-serif; background: #fffbea; padding: 20px; }
     .card { background: #fff8e1; padding: 20px; border-radius: 12px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); }
     label { font-weight: bold; }
     input, select, textarea { width: 100%; padding: 8px; margin: 5px 0 15px 0; border-radius: 6px; border: 1px solid #ccc; }
-    button { background-color: #ffcc80; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-right: 10px; }
+    button {
+      background-color: #ffcc80;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
     button:hover { background-color: #ffb74d; }
-    img { max-width: 100%; margin-top: 10px; }
+    img { max-width: 160px; margin-right: 12px; display: block; }
     .preview-block { background: #fff3e0; padding: 10px; margin-top: 10px; border-radius: 6px; white-space: pre-wrap; }
+    .row-flex { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 15px; }
+    .table-edit-btn { padding: 3px 10px; background: #ffe0b2; border: 1px solid #e0a96d; border-radius: 5px; }
+    .table-edit-btn:hover { background: #ffb74d; }
+    .btn-col { margin: 36px 0 16px 0; display: flex; flex-direction: column; gap: 22px; }
+    .add-space-btn-wrap { width: auto; align-self: flex-start; }
+    .add-space-btn { width: auto; min-width: 90px; max-width: 180px; }
+    .desc-tips { font-size: 16px; margin: 4px 0 8px 0; color: #ab791a; font-weight: bold;}
+    @media (max-width: 700px) {
+      .row-flex { flex-direction: column; align-items: flex-start; }
+      img { margin-bottom: 12px; }
+      .btn-col { gap:18px;}
+      .add-space-btn-wrap { width: 100%; }
+      .add-space-btn { width: 100%; max-width: 100%; }
+    }
   </style>
 </head>
 <body>
   <div class="card">
     <h2>🏠 空間設計導覽文案小幫手</h2>
 
-    <label>📷 上傳2D平面圖（JPG / PNG）</label>
-    <input type="file" id="floorplan" accept="image/png, image/jpeg" onchange="previewImage(event)">
-    <img id="preview" style="max-height: 300px; object-fit: contain;" />
-
-    <label>📐 總坪數（可選填）</label>
-    <input type="number" id="total_area" placeholder="例如：18.5">
+    <div class="row-flex">
+      <div>
+        <label>📷 上傳2D平面圖（JPG / PNG）</label>
+        <input type="file" id="floorplan" accept="image/png, image/jpeg" onchange="previewImage(event)">
+        <img id="preview" style="max-height: 120px; object-fit: contain; display:block;" />
+      </div>
+    </div>
+    <div style="margin-bottom: 18px;">
+      <label>📐 總坪數（可手動輸入或AI自動估算）</label>
+      <input type="number" id="total_area" placeholder="AI自動估算" style="max-width:140px; display:inline-block;">
+      <span id="areaPreview" style="color:#7b5; font-size:15px; margin-left: 15px;"></span>
+      <span id="assignTip" style="color:#ab791a; font-size:13px;"></span>
+    </div>
 
     <label>🎨 設計風格</label>
     <select id="style" onchange="updateStyleInfo(this.value)">
@@ -38,33 +66,34 @@
 
     <label>👨‍👩‍👧 居住成員</label>
     <input id="member" placeholder="例如：夫妻＋國小女兒＋灰貓">
-
     <label>💼 職業</label>
     <input id="job" placeholder="例如：夫妻皆為公務員">
-
     <label>🎯 興趣與生活習慣</label>
     <input id="hobby" placeholder="例如：打羽毛球、看影集、收藏公仔">
-
     <label>📦 空間主要需求</label>
     <input id="need" placeholder="例如：大量收納、寵物共居、閱讀空間">
-    <button onclick="analyzeFurniture()">📊 分析空間與家具配置</button>
 
+    <button onclick="analyzeFurniture()">📊 分析空間與家具配置</button>
     <p id="status"></p>
     <div id="furniturePreview" class="preview-block"></div>
-        
-    <label>✏️ 家具配置修正（可補充／修正原始辨識）</label>
-    <textarea id="furniture_correction" rows="6" placeholder="例如：主臥增加床頭櫃2個，客廳原本沙發辨識錯誤為書櫃" style="width:100%; margin-top:5px;"></textarea>
-    <div style="background:#fff3e0; padding:8px 12px; margin-top:5px; font-size: 13px; line-height: 1.6; border-radius: 6px; color:#333;">
-      例如：主臥室增加床頭櫃2個，客廳刪除茶几，書房坪數改為3.2，餐廳清空家具，新增陽台 1.5坪，家具：洗衣機、曬衣架，主臥室將床頭櫃改為床頭櫃3個，主臥室改名為夫妻房，刪除多功能房
-      <br><span style="font-size: 12px; color: #777;">每句請用頓號、逗號或換行分隔後點擊「🔁 更新家具配置預覽」按鈕</span>
+
+    <div style="font-weight:bold; margin:10px 0 5px 0;">
+      <span id="showTotalArea" style="color:#c18801;"></span>
     </div>
 
-    <button onclick="applyFurnitureCorrection()">🔁 更新家具配置預覽</button>
-    <button onclick="submitForm()">📝 產出導覽文案</button>
+    <div class="btn-col">
+      <div class="add-space-btn-wrap">
+        <button class="add-space-btn" onclick="addSpace()">➕ 新增空間</button>
+      </div>
+      <div>
+        <div class="desc-tips">確認上方空間與傢俱配置後請按「分段產出完整導覽文案」鈕，即可立即產出文案。</div>
+        <button onclick="generateAllSections()">📝 分段產出完整導覽文案</button>
+      </div>
+    </div>
+
     <div id="docPreview" class="preview-block">📝 文案預覽區將顯示於此</div>
     <button id="downloadWord" onclick="downloadWordDoc()" style="display:none;">📄 下載 Word 文案</button>
   </div>
-
   <script>
     const styleFeatureMap = {
       "北歐風": "清新自然簡約", "日式禪風": "靜謐留白禪意", "工業風": "粗獷水泥金屬",
@@ -86,6 +115,37 @@
       reader.readAsDataURL(event.target.files[0]);
     }
 
+    // 手動輸入總坪數時，自動依比例推算空間坪數
+    document.addEventListener('DOMContentLoaded', function(){
+      document.getElementById("total_area").addEventListener('input', function(){
+        let total = parseFloat(this.value);
+        let tip = document.getElementById('assignTip');
+        if (total && window.latestParsedFurniture && window.latestParsedFurniture.length > 0) {
+          // 自動分配（只會分配一次，之後若有手動修正就不再改）
+          let oldSum = window.latestParsedFurniture.reduce((sum, s) => sum + (parseFloat(s.area) || 0), 0);
+          if (oldSum > 0) {
+            window.latestParsedFurniture.forEach(s => {
+              // 比例分配，最多一位小數
+              s.area = Math.round((parseFloat(s.area) || 0) / oldSum * total * 10) / 10;
+            });
+            renderFurnitureTable(window.latestParsedFurniture);
+            tip.innerText = "各空間坪數已自動按比例分配，可手動微調。";
+          }
+        } else {
+          tip.innerText = "";
+        }
+        calcAndDisplayTotalArea(); // 同步顯示
+      });
+    });
+
+    function calcAndDisplayTotalArea() {
+      let total = 0;
+      if (window.latestParsedFurniture && window.latestParsedFurniture.length) {
+        total = window.latestParsedFurniture.reduce((sum, s) => sum + (parseFloat(s.area) || 0), 0);
+      }
+      document.getElementById("showTotalArea").innerText = "空間總坪數：" + (total || '') + " 坪";
+    }
+
     async function analyzeFurniture() {
       const fileInput = document.getElementById("floorplan");
       const status = document.getElementById("status");
@@ -103,87 +163,123 @@
       const parseRes = await fetch("https://interior-indoortour-ai.onrender.com/api/parse_floorplan", { method: "POST", body: formData });
       const parsed = await parseRes.json();
       window.latestParsedFurniture = parsed.spaces;
+      window.latestTotalArea = parsed.total_area;
 
-      if (parsed.spaces && parsed.spaces.length > 0) {
-        renderFurnitureTable(parsed.spaces);
-      } else {
-        furniturePreview.innerText = "❌ 無法辨識空間與家具配置";
+      // 若用戶沒填總坪數，就帶入AI估算
+      if (!document.getElementById("total_area").value && parsed.total_area) {
+        document.getElementById("total_area").value = parsed.total_area;
       }
+      renderFurnitureTable(parsed.spaces);
+      calcAndDisplayTotalArea();
+      document.getElementById('assignTip').innerText = '';
       status.textContent = "✅ 分析完成，請繼續產出導覽文案。";
     }
 
-    async function submitForm() {
-      const fileInput = document.getElementById("floorplan");
-      const totalArea = document.getElementById("total_area").value;
-      const style = document.getElementById("style").value;
-      const owner_info = 
-        "居住成員：" + document.getElementById("member").value + "\n" +
-        "職業：" + document.getElementById("job").value + "\n" +
-        "興趣：" + document.getElementById("hobby").value + "\n" +
-        "需求：" + document.getElementById("need").value;
-      const status = document.getElementById("status");
+    function renderFurnitureTable(spaces) {
+      let tableHtml = "<h3>📋 家具配置預覽（可直接點擊編輯）</h3><table border='1' cellpadding='6' style='border-collapse:collapse; width:100%; text-align:left;'><thead><tr><th>空間名稱</th><th>坪數</th><th>主要家具配置</th><th>操作</th></tr></thead><tbody>";
+      spaces.forEach((space, i) => {
+        tableHtml += `<tr>
+          <td><input value="${space.name}" onchange="editSpace(${i}, 'name', this.value)"></td>
+          <td><input value="${space.area}" style="width:60px;" onchange="editSpace(${i}, 'area', this.value)"></td>
+          <td><input value="${Array.isArray(space.furniture) ? space.furniture.join('、') : ''}" onchange="editSpace(${i}, 'furniture', this.value)"></td>
+          <td><button class="table-edit-btn" onclick="deleteSpace(${i})">刪除</button></td>
+        </tr>`;
+      });
+      tableHtml += `</tbody></table>`;
+      document.getElementById("furniturePreview").innerHTML = tableHtml;
+    }
 
-      if (!fileInput.files.length) {
-        status.textContent = "請上傳圖面";
-        return;
+    function editSpace(i, key, value) {
+      if (key === "furniture") {
+        window.latestParsedFurniture[i][key] = value.split("、").map(f => f.trim()).filter(f=>f);
+      } else if (key === "area") {
+        window.latestParsedFurniture[i][key] = parseFloat(value);
+        calcAndDisplayTotalArea();
+      } else {
+        window.latestParsedFurniture[i][key] = value;
       }
+    }
+    function deleteSpace(i) {
+      window.latestParsedFurniture.splice(i, 1);
+      renderFurnitureTable(window.latestParsedFurniture);
+      calcAndDisplayTotalArea();
+    }
+    function addSpace() {
+      if (!window.latestParsedFurniture) window.latestParsedFurniture = [];
+      window.latestParsedFurniture.push({ name: "新空間", area: 0, furniture: [] });
+      renderFurnitureTable(window.latestParsedFurniture);
+      calcAndDisplayTotalArea();
+    }
 
-      status.textContent = "🧠 正在產出文案...";
+    window.generatedSections = {};
+    async function generateAllSections() {
+      const fileInput = document.getElementById("floorplan");
+      if (!fileInput.files.length) { alert("請上傳圖面"); return; }
 
-      // **關鍵修正**：不論有無修正，都直接取最新的配置
-      const data = {
-        total_area: totalArea,
-        style: style,
-        owner_info: owner_info,
+      // 產出時，最終總坪數用實際加總
+      let areaSum = 0;
+      if (window.latestParsedFurniture && window.latestParsedFurniture.length) {
+        areaSum = window.latestParsedFurniture.reduce((sum, s) => sum + (parseFloat(s.area) || 0), 0);
+      }
+      document.getElementById("areaPreview").innerText = "";
+      document.getElementById("showTotalArea").innerText = "空間總坪數：" + (areaSum || '') + " 坪";
+
+      const payload = {
+        total_area: areaSum, // 用表格加總為主
+        style: document.getElementById("style").value,
+        owner_info:
+          "居住成員：" + document.getElementById("member").value + "\n" +
+          "職業：" + document.getElementById("job").value + "\n" +
+          "興趣：" + document.getElementById("hobby").value + "\n" +
+          "需求：" + document.getElementById("need").value,
         furniture_layout: window.latestParsedFurniture,
         image_filename: fileInput.files[0].name
       };
 
-      const genRes = await fetch("https://interior-indoortour-ai.onrender.com/api/generate_design_narrative", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data)
-      });
-      const genData = await genRes.json();
+      let sectionOrder = ["concept","overview","rooms","owner_story","conclusion"];
+      let sectionNames = {
+        concept: "提案命名與設計理念總述",
+        overview: "空間總覽與動線說明",
+        rooms: "逐區空間導覽",
+        owner_story: "屋主故事",
+        conclusion: "空間結語"
+      };
 
-      window.generatedDocPayload = { ...genData, image_filename: fileInput.files[0].name };
-      document.getElementById("downloadWord").style.display = "inline-block";
-
-      let previewText = "";
-      if (genData.concept) previewText += genData.concept + "\n\n";
-      if (Array.isArray(genData.sections)) {
-        previewText += genData.sections.map(s => {
-          if (s.room) {
-            // Word格式
-            return "【" + s.room + "】\n" +
-              "坪數：" + (s.area || "") + "\n" +
-              "功能：" + (s.function || "") + "\n" +
-              "傢俱配置：" + (Array.isArray(s.furniture) ? s.furniture.join("、") : s.furniture || "") + "\n" +
-              "色彩搭配：" + (s.color || "") + "\n" +
-              "設計重點：" + (s.design_note || "") + "\n" +
-              "情感描述：" + (s.emotion || "");
-          } else if (s.title && s.text) {
-            // 舊格式
-            return "【" + s.title + "】\n" + s.text;
+      document.getElementById("docPreview").innerText = "⏳ 產生中...";
+      for (const section of sectionOrder) {
+        const res = await fetch("https://interior-indoortour-ai.onrender.com/api/generate_section", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...payload, section })
+        });
+        const data = await res.json();
+        window.generatedSections[section] = data.content || "";
+        let preview = "";
+        for (const sec of sectionOrder) {
+          if (window.generatedSections[sec]) {
+            preview += `【${sectionNames[sec]}】\n${window.generatedSections[sec]}\n\n`;
           }
-          return "";
-        }).join("\n\n") + "\n\n";
+        }
+        document.getElementById("docPreview").innerText = preview.trim();
       }
-      if (genData.conclusion) previewText += genData.conclusion;
-      if (genData.error) {
-        document.getElementById("docPreview").innerText = "❌ 錯誤：" + genData.error;
-        return;
-      }
-      if (!previewText && genData.content) {
-        previewText = genData.content;
-      }
-      document.getElementById("docPreview").innerText = previewText || "❌ 文案產出失敗或格式錯誤";
-      status.textContent = "✅ 已下載 Word 文案完成！";
+      document.getElementById("downloadWord").style.display = "inline-block";
     }
 
     async function downloadWordDoc() {
+      const fileInput = document.getElementById("floorplan");
+      let areaSum = 0;
+      if (window.latestParsedFurniture && window.latestParsedFurniture.length) {
+        areaSum = window.latestParsedFurniture.reduce((sum, s) => sum + (parseFloat(s.area) || 0), 0);
+      }
+      const payload = {
+        ...window.generatedSections,
+        total_area: areaSum,
+        image_filename: fileInput.files[0].name
+      };
       const docRes = await fetch("https://interior-indoortour-ai.onrender.com/api/download_word_docx", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(window.generatedDocPayload)
+        body: JSON.stringify(payload)
       });
       const blob = await docRes.blob();
       const url = window.URL.createObjectURL(blob);
@@ -191,93 +287,6 @@
       a.href = url;
       a.download = "空間設計導覽文案.docx";
       a.click();
-    }
-
-    function renderFurnitureTable(spaces) {
-      let tableHtml = "<h3>📋 家具配置預覽</h3><table border='1' cellpadding='6' style='border-collapse:collapse; width:100%; text-align:left;'><thead><tr><th>空間名稱</th><th>坪數</th><th>主要家具配置</th></tr></thead><tbody>";
-      spaces.forEach(space => {
-        const furnitureList = Array.isArray(space.furniture) ? space.furniture.join("、") : "";
-        tableHtml += `<tr><td>${space.name}</td><td>${space.area}</td><td>${furnitureList}</td></tr>`;
-      });
-      tableHtml += "</tbody></table>";
-      document.getElementById("furniturePreview").innerHTML = tableHtml;
-    }
-
-    function applyFurnitureCorrection() {
-      const correctionText = document.getElementById("furniture_correction").value.trim();
-      if (!window.latestParsedFurniture || !correctionText) return;
-
-      const updates = correctionText.split("，");
-      updates.forEach(update => {
-        let space;
-        let renameRoom = update.match(/(.+?)改名為(.+)/);
-        if (renameRoom) {
-          const from = renameRoom[1].trim();
-          const to = renameRoom[2].trim();
-          space = window.latestParsedFurniture.find(s => s.name === from);
-          if (space) space.name = to;
-          return;
-        }
-        let addRoom = update.match(/新增(.+?)\s*([\d.]+)坪，家具[:：](.+)/);
-        if (addRoom) {
-          const name = addRoom[1].trim();
-          const area = parseFloat(addRoom[2]);
-          const furnitureList = addRoom[3].split("、").map(f => f.trim());
-          window.latestParsedFurniture.push({ name, area, furniture: furnitureList });
-          return;
-        }
-        let delRoom = update.match(/刪除(.+?)/);
-        if (delRoom) {
-          const name = delRoom[1].trim();
-          window.latestParsedFurniture = window.latestParsedFurniture.filter(s => s.name !== name);
-          return;
-        }
-        let renameFurniture = update.match(/(.+?)將(.+?)改為(.+)/);
-        if (renameFurniture) {
-          const room = renameFurniture[1].trim();
-          const from = renameFurniture[2].trim();
-          const to = renameFurniture[3].trim();
-          space = window.latestParsedFurniture.find(s => s.name === room);
-          if (space) {
-            const idx = space.furniture.findIndex(f => f.includes(from));
-            if (idx !== -1) space.furniture[idx] = to;
-          }
-          return;
-        }
-        let addMatch = update.match(/(.+?)增加(.+)/);
-        if (addMatch) {
-          const roomName = addMatch[1].trim();
-          const item = addMatch[2].trim();
-          space = window.latestParsedFurniture.find(s => s.name === roomName);
-          if (space) space.furniture.push(item);
-          return;
-        }
-        let delMatch = update.match(/(.+?)刪除(.+)/);
-        if (delMatch) {
-          const roomName = delMatch[1].trim();
-          const item = delMatch[2].trim();
-          space = window.latestParsedFurniture.find(s => s.name === roomName);
-          if (space) space.furniture = space.furniture.filter(f => !f.includes(item));
-          return;
-        }
-        let areaMatch = update.match(/(.+?)坪數改為([\d.]+)/);
-        if (areaMatch) {
-          const roomName = areaMatch[1].trim();
-          const newArea = parseFloat(areaMatch[2]);
-          space = window.latestParsedFurniture.find(s => s.name === roomName);
-          if (space && !isNaN(newArea)) space.area = newArea;
-          return;
-        }
-        let clearMatch = update.match(/(.+?)清空家具/);
-        if (clearMatch) {
-          const roomName = clearMatch[1].trim();
-          space = window.latestParsedFurniture.find(s => s.name === roomName);
-          if (space) space.furniture = [];
-          return;
-        }
-      });
-
-      renderFurnitureTable(window.latestParsedFurniture);
     }
   </script>
 </body>
