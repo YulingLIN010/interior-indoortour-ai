@@ -23,7 +23,21 @@ def parse_floorplan():
         filename = image_file.filename
         save_path = os.path.join(UPLOAD_FOLDER, filename)
         image_file.save(save_path)
+        # 取得使用者輸入的總坪數
+        user_total_area = request.form.get("user_total_area", None)
         result = parse_floorplan_image(image_file)
+        # 若有輸入總坪數，則依比例分配給各空間
+        if user_total_area and "spaces" in result:
+            try:
+                user_total_area = float(user_total_area)
+                ai_sum = sum(s.get("area", 0) for s in result["spaces"])
+                if ai_sum > 0:
+                    for s in result["spaces"]:
+                        ratio = s.get("area", 0) / ai_sum
+                        s["area"] = round(ratio * user_total_area, 1)
+                result["total_area"] = user_total_area
+            except Exception as e:
+                result["total_area"] = result.get("total_area", None)
         result["image_filename"] = filename
         return jsonify(result)
     except Exception as e:
@@ -49,4 +63,3 @@ def download_docx():
 
 if __name__ == "__main__":
     app.run(debug=True)
-

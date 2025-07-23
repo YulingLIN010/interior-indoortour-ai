@@ -41,13 +41,13 @@
 
     <div class="row-flex">
       <div>
-        <label>📷 上傳平面配置圖（JPG / PNG）</label>
+        <label>📷 上傳2D平面圖（JPG / PNG）</label>
         <input type="file" id="floorplan" accept="image/png, image/jpeg" onchange="previewImage(event)">
         <img id="preview" style="max-height: 120px; object-fit: contain; display:block;" />
       </div>
     </div>
     <div style="margin-bottom: 18px;">
-      <label>📐 總坪數（可手動輸入，如無輸入由AI自動估算）</label>
+      <label>📐 總坪數（可手動輸入或AI自動估算）</label>
       <input type="number" id="total_area" placeholder="AI自動估算" style="max-width:140px; display:inline-block;">
       <span id="areaPreview" style="color:#7b5; font-size:15px; margin-left: 15px;"></span>
       <span id="assignTip" style="color:#ab791a; font-size:13px;"></span>
@@ -73,7 +73,7 @@
     <label>📦 空間主要需求</label>
     <input id="need" placeholder="例如：大量收納、寵物共居、閱讀空間">
 
-    <button onclick="analyzeFurniture()">📊 開始分析空間與家具配置</button>
+    <button onclick="analyzeFurniture()">📊 分析空間與家具配置</button>
     <p id="status"></p>
     <div id="furniturePreview" class="preview-block"></div>
 
@@ -86,8 +86,8 @@
         <button class="add-space-btn" onclick="addSpace()">➕ 新增空間</button>
       </div>
       <div>
-        <div class="desc-tips">上方空間與傢俱配置確認後請按「開始分段產出完整導覽文案」，請等待文案全部產出後出現"WORD下載")</div>
-        <button onclick="generateAllSections()">📝 開始分段產出完整導覽文案</button>
+        <div class="desc-tips">確認上方空間與傢俱配置後請按「分段產出完整導覽文案」鈕，即可立即產出文案。</div>
+        <button onclick="generateAllSections()">📝 分段產出完整導覽文案</button>
       </div>
     </div>
 
@@ -115,7 +115,6 @@
       reader.readAsDataURL(event.target.files[0]);
     }
 
-    // 手動輸入總坪數時，自動依比例推算空間坪數
     document.addEventListener('DOMContentLoaded', function(){
       document.getElementById("total_area").addEventListener('input', function(){
         let total = parseFloat(this.value);
@@ -144,6 +143,7 @@
       document.getElementById("showTotalArea").innerText = "空間總坪數：" + (total || '') + " 坪";
     }
 
+    // 🟢【重點修正】分析時送出 user_total_area 給後端
     async function analyzeFurniture() {
       const fileInput = document.getElementById("floorplan");
       const status = document.getElementById("status");
@@ -158,7 +158,6 @@
       status.textContent = "📤 正在分析圖面...";
       const formData = new FormData();
       formData.append("file", fileInput.files[0]);
-      // <<--- 修正：傳送 user_total_area 給後端
       if (userTotalArea) {
         formData.append("user_total_area", userTotalArea);
       }
@@ -214,6 +213,7 @@
     }
 
     window.generatedSections = {};
+    // 🟢【分段產文案】rooms區塊逐區請求
     async function generateAllSections() {
       const fileInput = document.getElementById("floorplan");
       if (!fileInput.files.length) { alert("請上傳圖面"); return; }
@@ -237,7 +237,6 @@
         image_filename: fileInput.files[0].name
       };
 
-      let sectionOrder = ["concept","overview","rooms","owner_story","conclusion"];
       let sectionNames = {
         concept: "提案命名與設計理念總述",
         overview: "空間總覽與動線說明",
@@ -247,22 +246,62 @@
       };
 
       document.getElementById("docPreview").innerText = "⏳ 產生中...";
-      for (const section of sectionOrder) {
+
+      // 1. 先產出其他區塊（非rooms）
+      let sections = {};
+      for (const section of ["concept", "overview", "owner_story", "conclusion"]) {
         const res = await fetch("https://interior-indoortour-ai.onrender.com/api/generate_section", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...payload, section })
         });
         const data = await res.json();
-        window.generatedSections[section] = data.content || "";
+        sections[section] = data.content || "";
         let preview = "";
-        for (const sec of sectionOrder) {
-          if (window.generatedSections[sec]) {
-            preview += `【${sectionNames[sec]}】\n${window.generatedSections[sec]}\n\n`;
+        for (const sec of ["concept", "overview"]) {
+          if (sections[sec]) {
+            preview += `【${sectionNames[sec]}】\n${sections[sec]}\n\n`;
           }
         }
-        document.getElementById("docPreview").innerText = preview.trim();
+        document.getElementById("docPreview").innerText = preview.trim() + "\n⏳ 逐區空間導覽產生中...";
       }
+
+      // 2. 逐區分段請求
+      let roomTexts = [];
+      let spaces = window.latestParsedFurniture || [];
+      for (let i = 0; i < spaces.length; i++) {
+        const space = spaces[i];
+        // 對每區發請求
+        const roomPayload = {
+          ...payload,
+          section: "room",
+          room_data: space,
+        };
+        document.getElementById("docPreview").innerText += `\n⏳ 產生中: ${space.name}...`;
+        const res = await fetch("https://interior-indoortour-ai.onrender.com/api/generate_section", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(roomPayload)
+        });
+        const data = await res.json();
+        roomTexts.push(`【${space.name}】\n${data.content}`);
+        // 即時刷新
+        document.getElementById("docPreview").innerText =
+          `${["concept","overview"].map(sec => sections[sec] ? `【${sectionNames[sec]}】\n${sections[sec]}` : "").join("\n\n")}\n\n` +
+          `【逐區空間導覽】\n${roomTexts.join('\n\n')}\n\n` +
+          `${["owner_story","conclusion"].map(sec => sections[sec] ? `【${sectionNames[sec]}】\n${sections[sec]}` : "").join("\n\n")}`;
+      }
+
+      // 組合結果
+      document.getElementById("docPreview").innerText =
+        `${["concept","overview"].map(sec => sections[sec] ? `【${sectionNames[sec]}】\n${sections[sec]}` : "").join("\n\n")}\n\n` +
+        `【逐區空間導覽】\n${roomTexts.join('\n\n')}\n\n` +
+        `${["owner_story","conclusion"].map(sec => sections[sec] ? `【${sectionNames[sec]}】\n${sections[sec]}` : "").join("\n\n")}`;
+
+      window.generatedSections = {
+        ...sections,
+        rooms: roomTexts.join('\n\n')
+      };
       document.getElementById("downloadWord").style.display = "inline-block";
     }
 
