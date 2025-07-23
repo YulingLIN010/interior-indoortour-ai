@@ -41,7 +41,7 @@
 
     <div class="row-flex">
       <div>
-        <label>📷 上傳2D平面圖（JPG / PNG）</label>
+        <label>📷 上傳平面配置圖(圖面標示各空間名稱)（JPG / PNG,限2MB）</label>
         <input type="file" id="floorplan" accept="image/png, image/jpeg" onchange="previewImage(event)">
         <img id="preview" style="max-height: 120px; object-fit: contain; display:block;" />
       </div>
@@ -73,7 +73,7 @@
     <label>📦 空間主要需求</label>
     <input id="need" placeholder="例如：大量收納、寵物共居、閱讀空間">
 
-    <button onclick="analyzeFurniture()">📊 分析空間與家具配置</button>
+    <button onclick="analyzeFurniture()">📊 開始分析空間與家具配置</button>
     <p id="status"></p>
     <div id="furniturePreview" class="preview-block"></div>
 
@@ -86,8 +86,8 @@
         <button class="add-space-btn" onclick="addSpace()">➕ 新增空間</button>
       </div>
       <div>
-        <div class="desc-tips">確認上方空間與傢俱配置後請按「分段產出完整導覽文案」鈕，即可立即產出文案。</div>
-        <button onclick="generateAllSections()">📝 分段產出完整導覽文案</button>
+        <div class="desc-tips">上方空間與傢俱配置確認後請按「開始分段產出完整導覽文案」，即可立即產出文案。</div>
+        <button onclick="generateAllSections()">📝 開始分段產出完整導覽文案</button>
       </div>
     </div>
 
@@ -95,6 +95,8 @@
     <button id="downloadWord" onclick="downloadWordDoc()" style="display:none;">📄 下載 Word 文案</button>
   </div>
   <script>
+    const API_BASE = "https://interior-indoortour-ai.onrender.com";
+
     const styleFeatureMap = {
       "北歐風": "清新自然簡約", "日式禪風": "靜謐留白禪意", "工業風": "粗獷水泥金屬",
       "簡約風": "線條清爽實用", "混搭風": "異材自由組合", "現代風": "俐落科技質感",
@@ -143,6 +145,25 @@
       document.getElementById("showTotalArea").innerText = "空間總坪數：" + (total || '') + " 坪";
     }
 
+    // 通用fetch防呆
+    async function fetchJSON(url, opts) {
+      try {
+        const res = await fetch(url, opts);
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error("API錯誤: " + res.status + " " + txt.slice(0, 80));
+        }
+        const ctype = res.headers.get("content-type") || '';
+        if (!ctype.includes("application/json")) {
+          const txt = await res.text();
+          throw new Error("回應不是JSON: " + txt.slice(0, 80));
+        }
+        return await res.json();
+      } catch (e) {
+        throw e;
+      }
+    }
+
     // 送出 user_total_area 給後端
     async function analyzeFurniture() {
       const fileInput = document.getElementById("floorplan");
@@ -162,18 +183,22 @@
         formData.append("user_total_area", userTotalArea);
       }
 
-      const parseRes = await fetch("/api/parse_floorplan", { method: "POST", body: formData });
-      const parsed = await parseRes.json();
-      window.latestParsedFurniture = parsed.spaces;
-      window.latestTotalArea = parsed.total_area;
+      try {
+        const parsed = await fetchJSON(API_BASE + "/api/parse_floorplan", { method: "POST", body: formData });
+        window.latestParsedFurniture = parsed.spaces;
+        window.latestTotalArea = parsed.total_area;
 
-      if (!document.getElementById("total_area").value && parsed.total_area) {
-        document.getElementById("total_area").value = parsed.total_area;
+        if (!document.getElementById("total_area").value && parsed.total_area) {
+          document.getElementById("total_area").value = parsed.total_area;
+        }
+        renderFurnitureTable(parsed.spaces);
+        calcAndDisplayTotalArea();
+        document.getElementById('assignTip').innerText = '';
+        status.textContent = "✅ 分析完成，請繼續產出導覽文案。";
+      } catch (e) {
+        status.textContent = "❌ 解析失敗：" + e.message;
+        furniturePreview.textContent = "";
       }
-      renderFurnitureTable(parsed.spaces);
-      calcAndDisplayTotalArea();
-      document.getElementById('assignTip').innerText = '';
-      status.textContent = "✅ 分析完成，請繼續產出導覽文案。";
     }
 
     function renderFurnitureTable(spaces) {
@@ -250,20 +275,24 @@
       // 1. 先產出其他區塊（非rooms）
       let sections = {};
       for (const section of ["concept", "overview", "owner_story", "conclusion"]) {
-        const res = await fetch("/api/generate_section", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...payload, section })
-        });
-        const data = await res.json();
-        sections[section] = data.content || "";
-        let preview = "";
-        for (const sec of ["concept", "overview"]) {
-          if (sections[sec]) {
-            preview += `【${sectionNames[sec]}】\n${sections[sec]}\n\n`;
+        try {
+          const data = await fetchJSON(API_BASE + "/api/generate_section", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...payload, section })
+          });
+          sections[section] = data.content || "";
+          let preview = "";
+          for (const sec of ["concept", "overview"]) {
+            if (sections[sec]) {
+              preview += `【${sectionNames[sec]}】\n${sections[sec]}\n\n`;
+            }
           }
+          document.getElementById("docPreview").innerText = preview.trim() + "\n⏳ 逐區空間導覽產生中...";
+        } catch (e) {
+          document.getElementById("docPreview").innerText = "❌ 產生文案失敗：" + e.message;
+          return;
         }
-        document.getElementById("docPreview").innerText = preview.trim() + "\n⏳ 逐區空間導覽產生中...";
       }
 
       // 2. 逐區分段請求
@@ -277,18 +306,22 @@
           room_data: space,
         };
         document.getElementById("docPreview").innerText += `\n⏳ 產生中: ${space.name}...`;
-        const res = await fetch("/api/generate_section", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(roomPayload)
-        });
-        const data = await res.json();
-        roomTexts.push(`【${space.name}】\n${data.content}`);
-        // 即時刷新
-        document.getElementById("docPreview").innerText =
-          `${["concept","overview"].map(sec => sections[sec] ? `【${sectionNames[sec]}】\n${sections[sec]}` : "").join("\n\n")}\n\n` +
-          `【逐區空間導覽】\n${roomTexts.join('\n\n')}\n\n` +
-          `${["owner_story","conclusion"].map(sec => sections[sec] ? `【${sectionNames[sec]}】\n${sections[sec]}` : "").join("\n\n")}`;
+        try {
+          const data = await fetchJSON(API_BASE + "/api/generate_section", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(roomPayload)
+          });
+          roomTexts.push(`【${space.name}】\n${data.content}`);
+          // 即時刷新
+          document.getElementById("docPreview").innerText =
+            `${["concept","overview"].map(sec => sections[sec] ? `【${sectionNames[sec]}】\n${sections[sec]}` : "").join("\n\n")}\n\n` +
+            `【逐區空間導覽】\n${roomTexts.join('\n\n')}\n\n` +
+            `${["owner_story","conclusion"].map(sec => sections[sec] ? `【${sectionNames[sec]}】\n${sections[sec]}` : "").join("\n\n")}`;
+        } catch (e) {
+          document.getElementById("docPreview").innerText = "❌ 產生逐區文案失敗：" + e.message;
+          return;
+        }
       }
 
       // 組合結果
@@ -315,18 +348,27 @@
         total_area: areaSum,
         image_filename: fileInput.files[0].name
       };
-      const docRes = await fetch("/api/download_word_docx", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const blob = await docRes.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "空間設計導覽文案.docx";
-      a.click();
+      try {
+        const docRes = await fetch(API_BASE + "/api/download_word_docx", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!docRes.ok) throw new Error("API錯誤: " + docRes.status);
+        const blob = await docRes.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "空間設計導覽文案.docx";
+        a.click();
+      } catch (e) {
+        alert("下載失敗：" + e.message);
+      }
     }
   </script>
 </body>
 </html>
+
+
+
+
