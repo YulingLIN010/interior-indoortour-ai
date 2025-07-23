@@ -9,9 +9,9 @@ def generate_narrative_prompt(data, section="concept"):
     if section == "concept":
         prompt = f"請根據以下資訊，產生【提案命名與設計理念總述】，150字內。\n設計風格：{style}\n總坪數：{total_area}\n屋主：{owner_info}"
     elif section == "overview":
-        prompt = f"請根據以下資訊，產生【空間總覽與動線說明】，100字內。\n總坪數：{total_area}\n空間分布：{', '.join([s.get('name','') for s in furniture])}\n"
+        prompt = f"請根據以下資訊，產生【空間總覽與動線說明】（依大門入口開始動線規劃及介紹)，100字內。\n總坪數：{total_area}\n空間分布：{', '.join([s.get('name','') for s in furniture])}\n"
     elif section == "rooms":
-        prompt = "請依下列空間資料，每個空間100字以上，產生【逐區空間導覽】（依動線順序分段、每區以『【空間名稱】』開頭，內容請條列式列出:坪數、功能、設計重點、色彩配置、家具重點、情感）。\n"
+        prompt = "請依下列空間資料，每個空間100字以上，產生【逐區空間導覽】（依大門入口動線開始順序分段、每區以『【空間名稱】』開頭，內容請條列式列出:坪數、功能、設計重點、色彩配置、家具重點、情感）。\n"
         for space in furniture:
             name = space.get("name", "未命名")
             area = space.get("area", "未提供")
