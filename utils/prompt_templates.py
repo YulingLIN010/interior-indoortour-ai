@@ -49,7 +49,7 @@ def call_gpt_narrative(prompt, data):
             {"role": "user", "content": prompt}
         ],
         temperature=0.7,
-        max_tokens=4096,
+        max_tokens=2048,
     )
     text = response.choices[0].message.content
     # 分章節正規化
