@@ -33,12 +33,15 @@ def generate_narrative_prompt(data):
             furn_list = [str(furn_list)]
         furniture_text = "、".join(furn_list)
         prompt += f"空間名稱：{name}，坪數：{area}，家具：{furniture_text}\n"
-    prompt += "\n請務必逐一分段、以下述格式完整回覆：\n" + \
-        "【提案命名與設計理念總述】\n...\n\n" + \
-        "【空間總覽與動線說明】\n...\n\n" + \
-        "【逐區空間導覽】\n【空間名稱】\n坪數：\n空間功能說明：\n家具重點配置：\n色彩搭配邏輯：\n設計重點分析：\n空間情感敘述：\n（請依動線順序寫出所有空間）\n\n" + \
-        "【屋主故事】\n...\n\n" + \
+    prompt += (
+        "\n請全文控制在1500字以內，每個空間請描述100字以上，所有章節請分段明確且結構完整。"
+        "\n請務必逐一分段、以下述格式完整回覆：\n"
+        "【提案命名與設計理念總述】\n...\n\n"
+        "【空間總覽與動線說明】\n...\n\n"
+        "【逐區空間導覽】\n【空間名稱】\n坪數：\n空間功能說明：\n家具重點配置：\n色彩搭配邏輯：\n設計重點分析：\n空間情感敘述：\n（請依動線順序寫出所有空間，每區100字以上）\n\n"
+        "【屋主故事】\n...\n\n"
         "【空間結語】\n..."
+    )
     return prompt
 
 def call_gpt_narrative(prompt, data):
@@ -49,7 +52,7 @@ def call_gpt_narrative(prompt, data):
             {"role": "user", "content": prompt}
         ],
         temperature=0.7,
-        max_tokens=2048,
+        max_tokens=1024,  # 先1024，如需更長可酌量增大
     )
     text = response.choices[0].message.content
     # 分章節正規化
